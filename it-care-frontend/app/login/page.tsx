@@ -20,8 +20,8 @@ export default function LoginPage() {
   }, [router]);
 
   const getApiBase = () => {
-    // ดึงค่าจาก Environment Variable ที่ตั้งไว้บน Vercel หรือใช้ Render เป็นค่าสำรอง
-    return process.env.NEXT_PUBLIC_API_URL || "https://it-care-backend-sy29.onrender.com";
+    // กำหนดลิงก์ Backend บน Render ตรงๆ ไปเลย เพื่อความชัวร์
+    return "https://it-care-backend-sy29.onrender.com";
   };
 
   const handleLogin = async (e: React.FormEvent) => {
