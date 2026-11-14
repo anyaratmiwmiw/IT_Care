@@ -59,7 +59,8 @@ export default function Dashboard() {
   const [submittingPm, setSubmittingPm] = useState(false);
 
   const getApiBase = () => {
-    return process.env.NEXT_PUBLIC_API_URL || 'https://it-care-backend-sy29.onrender.com';
+    // บังคับใช้ลิงก์ Render ตรงๆ เพื่อป้องกันปัญหาสring ต่อซ้อนกัน
+    return "https://it-care-backend-sy29.onrender.com";
   };
 
   const fetchAssets = async () => {
