@@ -29,6 +29,7 @@ import Link from "next/link";
 export default function Dashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [assets, setAssets] = useState<any[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
@@ -58,8 +59,7 @@ export default function Dashboard() {
   const [submittingPm, setSubmittingPm] = useState(false);
 
   const getApiBase = () => {
-    const host = typeof window !== "undefined" ? window.location.hostname : "127.0.0.1";
-    return `http://${host}:8000`;
+    return process.env.NEXT_PUBLIC_API_URL || 'https://it-care-backend-sy29.onrender.com';
   };
 
   const fetchAssets = async () => {
@@ -83,7 +83,7 @@ export default function Dashboard() {
 
   const fetchAssetDetail = async (tag: string) => {
     try {
-      const res = await fetch(`${getApiBase()}/api/v1/assets/${tag}`);
+      const res = await fetch(`${getApiBase()}/api/v1/assets`);
       if (res.ok) {
         const data = await res.json();
         setAssetDetail(data);
@@ -146,34 +146,40 @@ export default function Dashboard() {
     }
   };
 
+  // ระบบตรวจสอบสิทธิ์การเข้าสู่ระบบ: หากยังไม่ล็อกอิน ให้ดีดไปหน้า /login ทันที
   useEffect(() => {
-    fetchLineConfig();
-  }, []);
-
-  useEffect(() => {
-    // เช็กล็อกอิน
     const savedUser = localStorage.getItem("it_care_user");
-    if (savedUser) {
+    const savedToken = localStorage.getItem("it_care_token");
+
+    if (!savedUser || !savedToken) {
+      router.replace("/login");
+    } else {
       try {
         setCurrentUser(JSON.parse(savedUser));
+        setIsAuthChecking(false);
       } catch (e) {
         console.error("User session parse error", e);
+        localStorage.removeItem("it_care_user");
+        localStorage.removeItem("it_care_token");
+        router.replace("/login");
       }
     }
-  }, []);
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem("it_care_user");
     localStorage.removeItem("it_care_token");
     setCurrentUser(null);
-    router.push("/login");
+    router.replace("/login");
   };
 
   useEffect(() => {
+    if (!currentUser) return;
+    fetchLineConfig();
     fetchAssets();
     const interval = setInterval(fetchAssets, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (selectedAsset?.asset_tag) {
@@ -252,6 +258,21 @@ export default function Dashboard() {
 
   const currentAsset = selectedAsset || (assets.length > 0 ? assets[0] : null);
   const currentTelemetry = currentAsset?.telemetry || { cpu: 0, ram: 0, disk: 0 };
+
+  // หากกำลังตรวจสอบสิทธิ์ล็อกอิน ให้แสดง Loading Screen ป้องกันการแอบดูข้อมูล Dashboard
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+          <p className="text-slate-400 text-sm font-medium animate-pulse">
+            กำลังตรวจสอบสิทธิ์การเข้าสู่ระบบ IT CARE...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8">
@@ -460,7 +481,7 @@ export default function Dashboard() {
               <ShieldAlert className="w-4 h-4 text-amber-400" /> นโยบายการแจ้งเตือนและการส่ง LINE Notify
             </h3>
             <p className="text-slate-400 leading-relaxed">
-              ระบบประเมินค่า Telemetry ทุก 5 วินาที หากค่าทรัพยากรสูงเกินกำหนด จะบันทึก Alert Log และส่งการแจ้งเตือนเข้า LINE Notify พร้อมระบบ Cooldown 15 นาที เพื่อป้องกันการแจ้งเตือนรบกวนซ้ำซ้อน
+              ระบบประเมินค่า Telemetry ทุก 30 วินาที หากค่าทรัพยากรสูงเกินกำหนด จะบันทึก Alert Log และส่งการแจ้งเตือนเข้า LINE Notify พร้อมระบบ Cooldown 15 นาที เพื่อป้องกันการแจ้งเตือนรบกวนซ้ำซ้อน
             </p>
           </div>
         </div>
@@ -673,45 +694,45 @@ export default function Dashboard() {
       )}
 
       {/* QR Code Modal */}
-      {showQrModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full relative shadow-2xl text-center">
-            <button
-              onClick={() => setShowQrModal(false)}
-              className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
+{showQrModal && (
+  <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full relative shadow-2xl text-center">
+      <button
+        onClick={() => setShowQrModal(false)}
+        className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white"
+      >
+        <X className="w-5 h-5" />
+      </button>
 
-            <h3 className="text-lg font-bold text-white mb-1">QR Code สำหรับอุปกรณ์</h3>
-            <p className="text-xs text-blue-400 font-semibold mb-4">{qrAssetTag}</p>
+      <h3 className="text-lg font-bold text-white mb-1">QR Code สำหรับอุปกรณ์</h3>
+      <p className="text-xs text-blue-400 font-semibold mb-4">{qrAssetTag}</p>
 
-            <div className="bg-white p-4 rounded-xl inline-block border border-slate-700 shadow-inner mb-4">
-              <img
-                src={`${getApiBase()}/api/v1/assets/${qrAssetTag}/qr?host=${typeof window !== 'undefined' ? window.location.hostname : ''}`}
-                alt={`QR Code ${qrAssetTag}`}
-                className="w-48 h-48 mx-auto"
-              />
-            </div>
+      <div className="bg-white p-4 rounded-xl inline-block border border-slate-700 shadow-inner mb-4">
+        <img
+          src={`${getApiBase()}/api/v1/assets/${qrAssetTag}/qr?host=${typeof window !== 'undefined' ? window.location.host : ''}`}
+          alt={`QR Code ${qrAssetTag}`}
+          className="w-48 h-48 mx-auto"
+        />
+      </div>
 
-            <p className="text-xs text-slate-400 mb-2">
-              📱 สแกนด้วยกล้องมือถือ (ที่ต่อ Wi-Fi วงเดียวกัน) เพื่อเปิดดูสเปกและประวัติบำรุงรักษา
-            </p>
+      <p className="text-xs text-slate-400 mb-2">
+        📱 สแกนด้วยกล้องมือถือ (ที่ต่อ Wi-Fi วงเดียวกัน) เพื่อเปิดดูสเปกและประวัติบำรุงรักษา
+      </p>
 
-            <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 mb-4 text-[11px] text-slate-400 font-mono break-all select-all">
-              {typeof window !== 'undefined' ? `http://${window.location.hostname}:3000/assets/${qrAssetTag}` : `/assets/${qrAssetTag}`}
-            </div>
+      <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 mb-4 text-[11px] text-slate-400 font-mono break-all select-all">
+        {typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/assets/${qrAssetTag}` : `/assets/${qrAssetTag}`}
+      </div>
 
-            <Link
-              href={`/assets/${qrAssetTag}`}
-              target="_blank"
-              className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition"
-            >
-              <ExternalLink className="w-4 h-4" /> ทดสอบเปิดบนเครื่องนี้ (Direct Link)
-            </Link>
-          </div>
-        </div>
-      )}
+      <Link
+        href={`/assets/${qrAssetTag}`}
+        target="_blank"
+        className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition"
+      >
+        <ExternalLink className="w-4 h-4" /> ทดสอบเปิดบนเครื่องนี้ (Direct Link)
+      </Link>
+    </div>
+  </div>
+)}
 
       {/* PM Form Modal */}
       {showPmModal && (

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Mail, Lock, LogIn, Server, AlertCircle } from "lucide-react";
 
@@ -10,18 +10,35 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    // หากมี Session ที่ล็อกอินอยู่แล้ว ให้ข้ามไปยังหน้า Dashboard ทันที
+    const savedUser = localStorage.getItem("it_care_user");
+    const savedToken = localStorage.getItem("it_care_token");
+    if (savedUser && savedToken) {
+      router.replace("/");
+    }
+  }, [router]);
+
+  const getApiBase = () => {
+    if (typeof window !== "undefined") {
+      return "";
+    }
+    return "http://127.0.0.1:8000";
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/auth/login", {
+      // เปลี่ยนจาก "http://127.0.0.1:8000" มาใช้ `${getApiBase()}`
+      const res = await fetch(`${getApiBase()}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       });
-
+      
       const data = await res.json();
 
       if (!res.ok) {

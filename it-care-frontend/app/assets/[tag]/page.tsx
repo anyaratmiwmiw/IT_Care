@@ -37,8 +37,10 @@ export default function AssetMobileView() {
   const [successToast, setSuccessToast] = useState("");
 
   const getApiBase = () => {
-    const host = typeof window !== "undefined" ? window.location.hostname : "127.0.0.1";
-    return `http://${host}:8000`;
+    if (typeof window !== "undefined") {
+      return "";
+    }
+    return "http://127.0.0.1:8000";
   };
 
   const fetchDetail = async (silent = false) => {
