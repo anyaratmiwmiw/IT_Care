@@ -4,10 +4,14 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from typing import Optional
 import sys
 import io
 import requests
-import qrcode
+try:
+    import qrcode
+except ImportError:
+    qrcode = None
 import models, database
 
 # ป้องกันปัญหา Unicode Error เมื่อ print ข้อความภาษาไทย/emoji บน Windows
@@ -46,7 +50,7 @@ app = FastAPI(title="IT CARE API System", version="2.0")
 # ปลดล็อก CORS เพื่อให้ Frontend (Next.js) ดึงข้อมูลได้
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://192.168.1.102:3000", "http://localhost:3000"], # ["*"], หรือใส่ ["http://192.168.1.102:3000", "http://localhost:3000"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -158,6 +162,17 @@ class UserRegister(BaseModel):
     full_name: str
     role: str = "IT Support"
 
+class AgentHeartbeat(BaseModel):
+    device_id: Optional[str] = None
+    asset_tag: Optional[str] = None
+    cpu_percent: Optional[float] = None
+    ram_percent: Optional[float] = None
+    disk_percent: Optional[float] = None
+    operating_hours: Optional[float] = 0.0
+    cpu: Optional[float] = None
+    ram: Optional[float] = None
+    disk: Optional[float] = None
+
 
 import hashlib
 
@@ -227,9 +242,7 @@ def read_root():
     }
 
 
-# 1. API รับค่าจาก Telemetry Agent และประมวลผล Policy Alerting
-@app.post("/api/v1/telemetry")
-def receive_telemetry(asset_tag: str, cpu: float, ram: float, disk: float, db: Session = Depends(database.get_db)):
+def process_telemetry_data(asset_tag: str, cpu: float, ram: float, disk: float, operating_hours: float, db: Session):
     now = datetime.utcnow()
     
     # บันทึก Telemetry Log ลง Database
@@ -280,6 +293,21 @@ def receive_telemetry(asset_tag: str, cpu: float, ram: float, disk: float, db: S
         "device_status": asset.status,
         "last_seen": asset.last_seen.strftime("%Y-%m-%d %H:%M:%S")
     }
+
+# 1. API รับค่าจาก Telemetry Agent แบบเดิม (Query Params)
+@app.post("/api/v1/telemetry")
+def receive_telemetry(asset_tag: str, cpu: float, ram: float, disk: float, db: Session = Depends(database.get_db)):
+    return process_telemetry_data(asset_tag, cpu, ram, disk, 0.0, db)
+
+# 1.1 API รับค่า Heartbeat จาก Cloud Agent ตาม Blueprint (JSON Payload)
+@app.post("/api/agent/heartbeat")
+def receive_agent_heartbeat(payload: AgentHeartbeat, db: Session = Depends(database.get_db)):
+    tag = payload.device_id or payload.asset_tag or "UNKNOWN"
+    cpu = payload.cpu_percent if payload.cpu_percent is not None else (payload.cpu or 0.0)
+    ram = payload.ram_percent if payload.ram_percent is not None else (payload.ram or 0.0)
+    disk = payload.disk_percent if payload.disk_percent is not None else (payload.disk or 0.0)
+    hours = payload.operating_hours if payload.operating_hours is not None else 0.0
+    return process_telemetry_data(tag, cpu, ram, disk, hours, db)
 
 
 # 2. API ดึงรายการอุปกรณ์ทั้งหมดพร้อมประเมิน Online/Offline & PM Status
@@ -494,9 +522,19 @@ def get_local_ip():
 # 5. API สำหรับเจนเนอเรตภาพ QR Code ของอุปกรณ์
 @app.get("/api/v1/assets/{asset_tag}/qr")
 def generate_qr_code(asset_tag: str, host: str = Query(None)):
-    # หากผู้ใช้ส่ง host หรือ ip มาให้ใช้ค่านั้น ไม่งั้นจะใช้ LAN IP อัตโนมัติ
-    target_host = host if host else get_local_ip()
-    target_url = f"http://{target_host}:3000/assets/{asset_tag}"
+    if qrcode is None:
+        raise HTTPException(status_code=500, detail="qrcode library not installed")
+    public_url = os.environ.get("PUBLIC_URL")
+    if public_url:
+        target_url = f"{public_url.rstrip('/')}/assets/{asset_tag}"
+    elif host:
+        if host.startswith("http://") or host.startswith("https://"):
+            target_url = f"{host.rstrip('/')}/assets/{asset_tag}"
+        else:
+            target_url = f"https://{host.rstrip('/')}/assets/{asset_tag}"
+    else:
+        target_host = get_local_ip()
+        target_url = f"http://{target_host}:3000/assets/{asset_tag}"
     
     qr = qrcode.QRCode(
         version=1,

@@ -1,0 +1,27 @@
+# fly.toml – Fly.io configuration for IT_CARE backend
+app = "it-care"
+primary_region = "sin"  # เปลี่ยนเป็น Region ที่ต้องการ (เช่น iad, fra)
+
+[build]
+  dockerfile = "./Dockerfile"
+
+[env]
+  DATABASE_URL = "sqlite:///data/it_preventive.db"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls"]
+    port = 443
+
+# หากต้องการเก็บข้อมูล SQLite ให้คงที่ระหว่างการรีสตาร์ท ให้เพิ่มส่วนต่อไปนี้
+[[mounts]]
+  source = "it-care-data"
+  destination = "/data"
+

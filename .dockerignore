@@ -1,0 +1,29 @@
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Node / Frontend (Frontend แยกการรัน หรือ deploy แยก)
+it-care-frontend/
+
+# Python Cache & Bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local Database & Test Data
+it_preventive.db
+*.db-journal
+
+# Git & Logs
+.git/
+.gitignore
+*.log
+
+# Documents & Temp files
+*.pdf
+*.docx
+*.bat
+implementation_plan.md
+walkthrough.md
