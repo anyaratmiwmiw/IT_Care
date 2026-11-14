@@ -4,3 +4,6 @@ sqlalchemy
 pydantic
 requests
 qrcode
+pillow
+psutil
+psycopg2-binary
