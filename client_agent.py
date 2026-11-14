@@ -1,63 +1,89 @@
+import os
+import sys
 import time
+import socket
 import requests
 import psutil
-import socket
-import os
 
-# กำหนดที่อยู่ของ Backend Server
-API_URL = "http://127.0.0.1:8000/api/v1/telemetry"
+# ป้องกันปัญหาข้อความภาษาไทย/emoji บน Windows terminal
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
-# รหัสอ้างอิงของเครื่องนี้ (Asset Tag) - หากไม่กำหนดจะใช้ Hostname ของเครื่องอัตโนมัติ
-ASSET_TAG = os.environ.get("ASSET_TAG", "SERVER-01")
+# 1. กำหนดที่อยู่ของ Backend Server บน Cloud (Render.com)
+DEFAULT_API_URL = "https://it-care-backend-sy29.onrender.com/api/v1/telemetry"
+API_URL = os.environ.get("API_URL", DEFAULT_API_URL)
 
-# ระยะเวลาเว้นช่วงส่งข้อมูล (วินาที)
-INTERVAL_SECONDS = 5
+# 2. รหัสอ้างอิงของเครื่องนี้ (Asset Tag)
+ASSET_TAG = os.environ.get("ASSET_TAG", os.environ.get("DEVICE_ID", "SERVER-01"))
 
-def get_disk_usage():
+# 3. ความถี่การส่งข้อมูลตาม Policy ใน Blueprint (ทุก 30 วินาที)
+INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "30"))
+
+def get_disk_usage_percent():
+    """คำนวณการใช้งาน Disk ตามระบบปฏิบัติการ"""
     try:
-        # บน Windows ใช้ 'C:\\' หรือ Root Drive บน Linux/Mac ใช้ '/'
-        path = 'C:\\' if os.name == 'nt' else '/'
-        return psutil.disk_usage(path).percent
+        drive_path = 'C:\\' if os.name == 'nt' else '/'
+        return psutil.disk_usage(drive_path).percent
     except Exception:
         return 0.0
 
-def collect_and_send_telemetry():
+def get_operating_hours():
+    """คำนวณชั่วโมงการเปิดใช้งานเครื่องต่อเนื่อง (Uptime in hours)"""
     try:
-        # 1. ดึงค่าฮาร์ดแวร์จริงจากเครื่องคอมพิวเตอร์ด้วย psutil
-        cpu_usage = psutil.cpu_percent(interval=1)
-        ram_usage = psutil.virtual_memory().percent
-        disk_usage = get_disk_usage()
+        uptime_seconds = time.time() - psutil.boot_time()
+        return round(uptime_seconds / 3600, 2)
+    except Exception:
+        return 0.0
 
-        print(f"📊 [Agent] [{ASSET_TAG}] ดึงค่าสถานะเครื่อง: CPU={cpu_usage}%, RAM={ram_usage}%, Disk={disk_usage}%")
+def send_heartbeat():
+    """อ่านค่าสถานะฮาร์ดแวร์และส่งข้อมูลขึ้น Cloud ตลอด 24 ชม."""
+    try:
+        cpu = psutil.cpu_percent(interval=1)
+        ram = psutil.virtual_memory().percent
+        disk = get_disk_usage_percent()
+        operating_hours = get_operating_hours()
 
-        # 2. ส่งข้อมูลผ่าน REST API ไปยัง Backend
+        # ส่งค่าแบบ Query Parameters (params) และใช้ชื่อตัวแปรตามที่ Backend กำหนด
         params = {
             "asset_tag": ASSET_TAG,
-            "cpu": cpu_usage,
-            "ram": ram_usage,
-            "disk": disk_usage
+            "cpu": cpu,
+            "ram": ram,
+            "disk": disk,
+            "operating_hours": operating_hours
         }
-        
-        response = requests.post(API_URL, params=params, timeout=5)
-        
+
+        print(f"📊 [Agent] [{ASSET_TAG}] อ่านค่า: CPU={cpu}%, RAM={ram}%, Disk={disk}%, Uptime={operating_hours} hrs")
+
+        response = requests.post(API_URL, params=params, timeout=60)
+
         if response.status_code == 200:
             result = response.json()
-            dev_status = result.get("device_status", "Normal")
+            dev_status = result.get("device_status", result.get("status", "Normal"))
             if result.get("alert"):
-                print(f"🚨 [Agent Alert] ทรัพยากรสูงเกิน Threshold! (Status: {dev_status})")
+                print(f"🚨 [Agent Alert] ทรัพยากรสูงเกินเกณฑ์ Policy! (สถานะ: {dev_status})")
             else:
-                print(f"✅ [Agent] ส่งข้อมูลสถานะสำเร็จ (Status: {dev_status})")
+                print(f"✅ [Agent] ส่งข้อมูลเข้า Cloud สำเร็จ (สถานะ: {dev_status})")
         else:
-            print(f"❌ [Agent Error] ไม่สามารถส่งข้อมูลได้ HTTP Status: {response.status_code}")
+            print(f"❌ [Agent Error] เซิร์ฟเวอร์ตอบกลับรหัส: {response.status_code} ({response.text})")
 
+    except requests.exceptions.RequestException as req_err:
+        print(f"⚠️ [Agent Warning] ไม่สามารถเชื่อมต่อกับ Cloud API ({API_URL}): {req_err}")
     except Exception as e:
-        print(f"⚠️ [Agent Error] เกิดข้อผิดพลาดในการดึงข้อมูลหรือยิง API: {e}")
+        print(f"⚠️ [Agent Warning] เกิดข้อผิดพลาดไม่คาดคิด: {e}")
 
 if __name__ == "__main__":
     hostname = socket.gethostname()
-    print(f"🚀 เริ่มต้นการทำงานของ Client Agent สำหรับเครื่อง [{ASSET_TAG}] (Host: {hostname})...")
-    print(f"🔄 กำหนดส่งข้อมูลทุกๆ {INTERVAL_SECONDS} วินาที (กด Ctrl+C เพื่อเลิกทำงาน)")
-    
-    while True:
-        collect_and_send_telemetry()
-        time.sleep(INTERVAL_SECONDS)
+    print("=" * 60)
+    print("🚀 IT CARE — Client Agent (Cloud Production Mode)")
+    print(f"📌 Asset Tag    : {ASSET_TAG} (Hostname: {hostname})")
+    print(f"🌐 Cloud Target : {API_URL}")
+    print(f"⏱️ Interval     : ส่งข้อมูลทุกๆ {INTERVAL_SECONDS} วินาที")
+    print("=" * 60)
+    print("กด Ctrl+C เพื่อหยุดการทำงาน\n")
+
+    try:
+        while True:
+            send_heartbeat()
+            time.sleep(INTERVAL_SECONDS)
+    except KeyboardInterrupt:
+        print("\n🛑 หยุดการทำงานของ Client Agent เรียบร้อยแล้ว")
