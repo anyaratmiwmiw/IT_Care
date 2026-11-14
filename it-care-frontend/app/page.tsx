@@ -83,7 +83,8 @@ export default function Dashboard() {
 
   const fetchAssetDetail = async (tag: string) => {
     try {
-      const res = await fetch(`${getApiBase()}/api/v1/assets`);
+      // แก้ไขให้เรียก API เจาะจงตาม asset_tag ของอุปกรณ์
+      const res = await fetch(`${getApiBase()}/api/v1/assets/${tag}`);
       if (res.ok) {
         const data = await res.json();
         setAssetDetail(data);
