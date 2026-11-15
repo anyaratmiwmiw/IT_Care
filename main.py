@@ -8,6 +8,8 @@ from typing import Optional
 import sys
 import io
 import requests
+import os
+import qrcode
 try:
     import qrcode
 except ImportError:
