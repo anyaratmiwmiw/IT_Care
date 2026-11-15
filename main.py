@@ -50,7 +50,7 @@ app = FastAPI(title="IT CARE API System", version="2.0")
 # ปลดล็อก CORS เพื่อให้ Frontend (Next.js) ดึงข้อมูลได้
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://192.168.1.102:3000", "http://localhost:3000"], # ["*"], หรือใส่ ["http://192.168.1.102:3000", "http://localhost:3000"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
