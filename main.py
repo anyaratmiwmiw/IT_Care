@@ -24,7 +24,34 @@ if hasattr(sys.stdout, 'reconfigure'):
 models.Base.metadata.create_all(bind=database.engine)
 
 # สร้างบัญชีผู้ดูแลเริ่มต้นอัตโนมัติ หากยังไม่มีในระบบ (Self-healing Default Admin)
-def init_default_admin():
+def init_default_admin()
+
+# -------------------------------------------------
+# Initialise a default IT Support account (role "IT Support")
+# -------------------------------------------------
+def init_default_support():
+    db = next(database.get_db())
+    try:
+        import hashlib
+        support_email = "support@itcare.com"
+        existing = db.query(models.User).filter(models.User.email == support_email).first()
+        if not existing:
+            support_user = models.User(
+                email=support_email,
+                password_hash=hashlib.sha256("support123".encode("utf-8")).hexdigest(),
+                full_name="IT Support",
+                role="IT Support"
+            )
+            db.add(support_user)
+            db.commit()
+            print("👤 [Init] สร้างบัญชี IT Support เริ่มต้นสำเร็จ: support@itcare.com / support123")
+    except Exception as e:
+        print(f"⚠️ [Init Support Error] {e}")
+    finally:
+        db.close()
+
+init_default_support()
+:
     db = next(database.get_db())
     try:
         import hashlib
@@ -46,6 +73,33 @@ def init_default_admin():
         db.close()
 
 init_default_admin()
+
+# -------------------------------------------------
+# Initialise a default IT Support account (role "IT Support")
+# -------------------------------------------------
+def init_default_support():
+    db = next(database.get_db())
+    try:
+        import hashlib
+        support_email = "support@itcare.com"
+        existing = db.query(models.User).filter(models.User.email == support_email).first()
+        if not existing:
+            support_user = models.User(
+                email=support_email,
+                password_hash=hashlib.sha256("support123".encode("utf-8")).hexdigest(),
+                full_name="IT Support",
+                role="IT Support"
+            )
+            db.add(support_user)
+            db.commit()
+            print("👤 [Init] สร้างบัญชี IT Support เริ่มต้นสำเร็จ: support@itcare.com / support123")
+    except Exception as e:
+        print(f"⚠️ [Init Support Error] {e}")
+    finally:
+        db.close()
+
+init_default_support()
+
 
 app = FastAPI(title="IT CARE API System", version="2.0")
 

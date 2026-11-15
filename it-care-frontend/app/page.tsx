@@ -26,7 +26,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export default function Dashboard() {
+// Dashboard page now simply redirects to login when visited directly.
+// The actual Dashboard UI is moved to "/dashboard" route.
+export default function RootRedirect() {
+  const router = useRouter();
+  // Immediate redirect to login page (or you could redirect to /dashboard after auth)
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
+  // Render nothing (or a tiny placeholder) while redirecting
+  return null;
+}
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -59,8 +70,8 @@ export default function Dashboard() {
   const [submittingPm, setSubmittingPm] = useState(false);
 
   const getApiBase = () => {
-    // บังคับใช้ลิงก์ Render ตรงๆ เพื่อป้องกันปัญหาสring ต่อซ้อนกัน
-    return "https://it-care-backend-sy29.onrender.com";
+    // Use environment variable for backend base URL
+    return process.env.NEXT_PUBLIC_API_BASE || "";
   };
 
   const fetchAssets = async () => {

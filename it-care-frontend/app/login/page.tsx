@@ -20,8 +20,8 @@ export default function LoginPage() {
   }, [router]);
 
   const getApiBase = () => {
-    // กำหนดลิงก์ Backend บน Render ตรงๆ ไปเลย เพื่อความชัวร์
-    return "https://it-care-backend-sy29.onrender.com";
+    // Use environment variable for backend base URL
+    return process.env.NEXT_PUBLIC_API_BASE || "";
   };
 
   const handleLogin = async (e: React.FormEvent) => {
