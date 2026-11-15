@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import sys
 import io
@@ -121,6 +121,9 @@ def send_line_message(message_text: str):
 
 def trigger_line_notification(asset_tag: str, message_text: str, db: Session):
     """ส่งข้อความแจ้งเตือนผ่าน LINE พร้อมระบบ Cooldown 15 นาที"""
+    TH_TIMEZONE = timezone(timedelta(hours=7))
+    current_time_th_utc = datetime.now(TH_TIMEZONE).replace(tzinfo=None) # แปลงเป็น naive datetime สำหรับบันทึก DB ตามเวลาไทย
+    
     fifteen_mins_ago = datetime.utcnow() - timedelta(minutes=15)
     recent_alert = db.query(models.AlertLog).filter(
         models.AlertLog.asset_tag == asset_tag,
@@ -131,18 +134,20 @@ def trigger_line_notification(asset_tag: str, message_text: str, db: Session):
         print(f"⏳ [LINE Cooldown] ชะลอการส่งแจ้งเตือนสำหรับ {asset_tag} (เพิ่งส่งไปเมื่อ {recent_alert.sent_at.strftime('%H:%M:%S')})")
         return False
 
-    # บันทึก Alert Log
+    # บันทึก Alert Log (ใช้เวลาไทย)
     alert_log = models.AlertLog(
         asset_tag=asset_tag,
         alert_type="POLICY_WARNING",
         message=message_text,
-        sent_at=datetime.utcnow()
+        sent_at=current_time_th_utc
     )
     db.add(alert_log)
     db.commit()
 
+    formatted_time = datetime.now(TH_TIMEZONE).strftime('%d/%m/%Y %H:%M:%S')
+
     print(f"🚨 [ALERT LOG] บันทึกการแจ้งเตือน: {message_text}")
-    full_message = f"🚨 [IT CARE Alert]\n📌 อุปกรณ์: {asset_tag}\n⚠️ {message_text}\n⏰ เวลา: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    full_message = f"🚨 [IT CARE Alert]\n📌 อุปกรณ์: {asset_tag}\n⚠️ {message_text}\n⏰ เวลา: {formatted_time}"
     send_line_message(full_message)
     return True
 
@@ -433,27 +438,29 @@ def add_pm_log(asset_tag: str, record: PMRecordCreate, db: Session = Depends(dat
     if not asset:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลอุปกรณ์")
 
-    now = datetime.utcnow()
+    TH_TIMEZONE = timezone(timedelta(hours=7))
+    now_th = datetime.now(TH_TIMEZONE).replace(tzinfo=None)
+
     new_log = models.PMHistory(
         asset_tag=asset_tag,
         technician_name=record.technician_name,
         action_taken=record.action_taken,
         details=record.details,
         status=record.status,
-        performed_at=now
+        performed_at=now_th
     )
     db.add(new_log)
 
     # อัปเดตวัน PM ล่าสุด และคำนวณรอบถัดไป
-    asset.last_pm_date = now
-    asset.next_pm_date = now + timedelta(days=asset.pm_interval_days)
+    asset.last_pm_date = now_th
+    asset.next_pm_date = now_th + timedelta(days=asset.pm_interval_days)
 
     db.commit()
     db.refresh(new_log)
     db.refresh(asset)
 
     # ส่งแจ้งเตือน LINE เมื่อมีการทำ PM สำเร็จ
-    pm_msg = f"🛠️ [PM COMPLETED]\n📌 อุปกรณ์: {asset_tag}\n👷 ผู้ดำเนินการ: {record.technician_name}\n🔧 งาน: {record.action_taken}\n📅 กำหนด PM ครั้งถัดไป: {asset.next_pm_date.strftime('%Y-%m-%d')}"
+    pm_msg = f"🛠️ [PM COMPLETED]\n📌 อุปกรณ์: {asset_tag}\n👷 ผู้ดำเนินการ: {record.technician_name}\n🔧 งาน: {record.action_taken}\n📅 กำหนด PM ครั้งถัดไป: {asset.next_pm_date.strftime('%Y-%m-%d')}\n⏰ เวลา: {datetime.now(TH_TIMEZONE).strftime('%d/%m/%Y %H:%M:%S')}"
     send_line_message(pm_msg)
 
     return {
@@ -499,7 +506,10 @@ def update_line_config(config: LineConfigRequest):
 
 @app.post("/api/v1/line/test")
 def test_line_notification():
-    test_msg = f"🔔 [IT CARE Test]\nข้อความทดสอบการเชื่อมต่อระบบแจ้งเตือน LINE สำเร็จ!\n⏰ เวลา: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    TH_TIMEZONE = timezone(timedelta(hours=7))
+    current_time_th = datetime.now(TH_TIMEZONE).strftime('%d/%m/%Y %H:%M:%S')
+    
+    test_msg = f"🔔 [IT CARE Test]\nข้อความทดสอบการเชื่อมต่อระบบแจ้งเตือน LINE สำเร็จ!\n⏰ เวลา: {current_time_th}"
     sent = send_line_message(test_msg)
     return {
         "status": "success" if sent else "simulated",
