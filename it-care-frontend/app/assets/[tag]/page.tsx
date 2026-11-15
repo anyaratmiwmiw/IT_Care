@@ -37,10 +37,8 @@ export default function AssetMobileView() {
   const [successToast, setSuccessToast] = useState("");
 
   const getApiBase = () => {
-    if (typeof window !== "undefined") {
-      return "";
-    }
-    return "http://127.0.0.1:8000";
+    // ให้ระบุ URL ของ Render Backend โดยตรง เพื่อให้หน้าเว็บดึงข้อมูลจากเซิร์ฟเวอร์จริงได้เสมอ
+    return "https://it-care-backend-sy29.onrender.com";
   };
 
   const fetchDetail = async (silent = false) => {
