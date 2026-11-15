@@ -23,35 +23,8 @@ if hasattr(sys.stdout, 'reconfigure'):
 # สร้างโครงสร้างตารางข้อมูลอัตโนมัติ
 models.Base.metadata.create_all(bind=database.engine)
 
-# สร้างบัญชีผู้ดูแลเริ่มต้นอัตโนมัติ หากยังไม่มีในระบบ (Self-healing Default Admin)
-def init_default_admin()
-
-# -------------------------------------------------
-# Initialise a default IT Support account (role "IT Support")
-# -------------------------------------------------
-def init_default_support():
-    db = next(database.get_db())
-    try:
-        import hashlib
-        support_email = "support@itcare.com"
-        existing = db.query(models.User).filter(models.User.email == support_email).first()
-        if not existing:
-            support_user = models.User(
-                email=support_email,
-                password_hash=hashlib.sha256("support123".encode("utf-8")).hexdigest(),
-                full_name="IT Support",
-                role="IT Support"
-            )
-            db.add(support_user)
-            db.commit()
-            print("👤 [Init] สร้างบัญชี IT Support เริ่มต้นสำเร็จ: support@itcare.com / support123")
-    except Exception as e:
-        print(f"⚠️ [Init Support Error] {e}")
-    finally:
-        db.close()
-
-init_default_support()
-:
+# สร้างบัญชีผู้ดูแลเริ่มต้นอัตโนมัติ (Admin)
+def init_default_admin():
     db = next(database.get_db())
     try:
         import hashlib
@@ -72,11 +45,8 @@ init_default_support()
     finally:
         db.close()
 
-init_default_admin()
 
-# -------------------------------------------------
-# Initialise a default IT Support account (role "IT Support")
-# -------------------------------------------------
+# สร้างบัญชี IT Support เริ่มต้น
 def init_default_support():
     db = next(database.get_db())
     try:
@@ -98,8 +68,10 @@ def init_default_support():
     finally:
         db.close()
 
-init_default_support()
 
+# เรียกใช้งานฟังก์ชันเริ่มต้นทั้ง 2 ตัวเพียงครั้งเดียว
+init_default_admin()
+init_default_support()
 
 app = FastAPI(title="IT CARE API System", version="2.0")
 
