@@ -296,9 +296,9 @@ export default function RootRedirect() {
             <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
               IT CARE
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-950 text-blue-300 border border-blue-800">
+            {/* <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-950 text-blue-300 border border-blue-800">
               v2.0 System
-            </span>
+            </span> */}
           </div>
           <p className="text-slate-400 text-sm mt-1">
             ระบบติดตามสถานะและแจ้งเตือนการบำรุงรักษาเชิงป้องกันสำหรับอุปกรณ์คอมพิวเตอร์ (Preventive Maintenance & Alerting)
