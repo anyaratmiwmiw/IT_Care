@@ -26,18 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-// Dashboard page now simply redirects to login when visited directly.
-// The actual Dashboard UI is moved to "/dashboard" route.
-export default function RootRedirect() {
-  const router = useRouter();
-  // Immediate redirect to login page (or you could redirect to /dashboard after auth)
-  useEffect(() => {
-    router.replace("/login");
-  }, [router]);
-
-  // Render nothing (or a tiny placeholder) while redirecting
-  return null;
-}
+export default function DashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -70,7 +59,6 @@ export default function RootRedirect() {
   const [submittingPm, setSubmittingPm] = useState(false);
 
   const getApiBase = () => {
-    // Use environment variable for backend base URL
     return process.env.NEXT_PUBLIC_API_BASE || "";
   };
 
@@ -95,7 +83,6 @@ export default function RootRedirect() {
 
   const fetchAssetDetail = async (tag: string) => {
     try {
-      // แก้ไขให้เรียก API เจาะจงตาม asset_tag ของอุปกรณ์
       const res = await fetch(`${getApiBase()}/api/v1/assets/${tag}`);
       if (res.ok) {
         const data = await res.json();
@@ -159,7 +146,6 @@ export default function RootRedirect() {
     }
   };
 
-  // ระบบตรวจสอบสิทธิ์การเข้าสู่ระบบ: หากยังไม่ล็อกอิน ให้ดีดไปหน้า /login ทันที
   useEffect(() => {
     const savedUser = localStorage.getItem("it_care_user");
     const savedToken = localStorage.getItem("it_care_token");
@@ -242,11 +228,9 @@ export default function RootRedirect() {
     }
   };
 
-  // Search & Filter States
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("ALL"); // ALL, ONLINE, OFFLINE, WARNING, OVERDUE
+  const [filterCategory, setFilterCategory] = useState("ALL");
 
-  // Filtered Assets Calculation
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
       asset.asset_tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -262,7 +246,6 @@ export default function RootRedirect() {
     return true;
   });
 
-  // Summary Metrics
   const totalAssets = assets.length;
   const onlineAssets = assets.filter(a => a.is_online).length;
   const offlineAssets = assets.filter(a => !a.is_online).length;
@@ -272,7 +255,6 @@ export default function RootRedirect() {
   const currentAsset = selectedAsset || (assets.length > 0 ? assets[0] : null);
   const currentTelemetry = currentAsset?.telemetry || { cpu: 0, ram: 0, disk: 0 };
 
-  // หากกำลังตรวจสอบสิทธิ์ล็อกอิน ให้แสดง Loading Screen ป้องกันการแอบดูข้อมูล Dashboard
   if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
@@ -301,7 +283,6 @@ export default function RootRedirect() {
             ระบบติดตามสถานะและแจ้งเตือนการบำรุงรักษาเชิงป้องกันสำหรับอุปกรณ์คอมพิวเตอร์ (Preventive Maintenance & Alerting)
           </p>
         </div>
-      </header>
 
         <div className="flex flex-wrap items-center gap-3">
           {currentUser ? (
@@ -397,10 +378,8 @@ export default function RootRedirect() {
         </div>
       </div>
 
-      {/* Main Grid Section: Left = Asset Hardware Telemetry, Right = PM Schedule & Actions */}
+      {/* Main Grid Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-
-        {/* Realtime Telemetry Panel */}
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
@@ -486,7 +465,6 @@ export default function RootRedirect() {
             </div>
           </div>
 
-          {/* Telemetry Log Summary */}
           <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800 text-xs">
             <h3 className="font-semibold text-slate-300 mb-2 flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-amber-400" /> นโยบายการแจ้งเตือนและการส่ง LINE Notify
@@ -497,7 +475,7 @@ export default function RootRedirect() {
           </div>
         </div>
 
-        {/* Right Panel: Preventive PM Summary Card */}
+        {/* Right Panel: PM Summary */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -546,7 +524,6 @@ export default function RootRedirect() {
             <p className="text-xs text-slate-400 mt-1">คลิกที่แถวอุปกรณ์ใดๆ เพื่อเลือกดูรายละเอียดทรัพยากรด้านบน</p>
           </div>
 
-          {/* Search Box */}
           <div className="flex items-center gap-3">
             <input
               type="text"
@@ -563,46 +540,31 @@ export default function RootRedirect() {
         <div className="flex flex-wrap gap-2 mb-4">
           <button
             onClick={() => setFilterCategory("ALL")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "ALL"
-                ? "bg-blue-600 text-white border-blue-500"
-                : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "ALL" ? "bg-blue-600 text-white border-blue-500" : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"}`}
           >
             ทั้งหมด ({assets.length})
           </button>
           <button
             onClick={() => setFilterCategory("ONLINE")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "ONLINE"
-                ? "bg-emerald-600 text-white border-emerald-500"
-                : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "ONLINE" ? "bg-emerald-600 text-white border-emerald-500" : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"}`}
           >
             Online ({assets.filter(a => a.is_online).length})
           </button>
           <button
             onClick={() => setFilterCategory("OFFLINE")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "OFFLINE"
-                ? "bg-rose-600 text-white border-rose-500"
-                : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "OFFLINE" ? "bg-rose-600 text-white border-rose-500" : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"}`}
           >
             Offline ({assets.filter(a => !a.is_online).length})
           </button>
           <button
             onClick={() => setFilterCategory("WARNING")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "WARNING"
-                ? "bg-amber-600 text-white border-amber-500"
-                : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "WARNING" ? "bg-amber-600 text-white border-amber-500" : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"}`}
           >
             Warning/Alert ({assets.filter(a => a.status === "Warning" || a.status === "Critical").length})
           </button>
           <button
             onClick={() => setFilterCategory("OVERDUE")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "OVERDUE"
-                ? "bg-purple-600 text-white border-purple-500"
-                : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${filterCategory === "OVERDUE" ? "bg-purple-600 text-white border-purple-500" : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"}`}
           >
             PM เลยกำหนด ({assets.filter(a => a.pm_days_left < 0).length})
           </button>
@@ -628,16 +590,12 @@ export default function RootRedirect() {
                   <tr
                     key={asset.id}
                     onClick={() => setSelectedAsset(asset)}
-                    className={`cursor-pointer transition ${isSelected ? "bg-blue-950/60 border-l-4 border-l-blue-500" : "hover:bg-slate-800/40"
-                      }`}
+                    className={`cursor-pointer transition ${isSelected ? "bg-blue-950/60 border-l-4 border-l-blue-500" : "hover:bg-slate-800/40"}`}
                   >
                     <td className="p-3 font-semibold text-blue-400">{asset.asset_tag}</td>
                     <td className="p-3 font-medium text-slate-200">{asset.name}</td>
                     <td className="p-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${asset.is_online
-                          ? "bg-emerald-950/80 text-emerald-400 border border-emerald-800/50"
-                          : "bg-rose-950/80 text-rose-400 border border-rose-800/50"
-                        }`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${asset.is_online ? "bg-emerald-950/80 text-emerald-400 border border-emerald-800/50" : "bg-rose-950/80 text-rose-400 border border-rose-800/50"}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${asset.is_online ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`}></span>
                         {asset.is_online ? "ONLINE" : "OFFLINE"}
                       </span>
@@ -705,45 +663,45 @@ export default function RootRedirect() {
       )}
 
       {/* QR Code Modal */}
-{showQrModal && (
-  <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full relative shadow-2xl text-center">
-      <button
-        onClick={() => setShowQrModal(false)}
-        className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white"
-      >
-        <X className="w-5 h-5" />
-      </button>
+      {showQrModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full relative shadow-2xl text-center">
+            <button
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-      <h3 className="text-lg font-bold text-white mb-1">QR Code สำหรับอุปกรณ์</h3>
-      <p className="text-xs text-blue-400 font-semibold mb-4">{qrAssetTag}</p>
+            <h3 className="text-lg font-bold text-white mb-1">QR Code สำหรับอุปกรณ์</h3>
+            <p className="text-xs text-blue-400 font-semibold mb-4">{qrAssetTag}</p>
 
-      <div className="bg-white p-4 rounded-xl inline-block border border-slate-700 shadow-inner mb-4">
-        <img
-          src={`${getApiBase()}/api/v1/assets/${qrAssetTag}/qr?host=${typeof window !== 'undefined' ? window.location.host : ''}`}
-          alt={`QR Code ${qrAssetTag}`}
-          className="w-48 h-48 mx-auto"
-        />
-      </div>
+            <div className="bg-white p-4 rounded-xl inline-block border border-slate-700 shadow-inner mb-4">
+              <img
+                src={`${getApiBase()}/api/v1/assets/${qrAssetTag}/qr?host=${typeof window !== 'undefined' ? window.location.host : ''}`}
+                alt={`QR Code ${qrAssetTag}`}
+                className="w-48 h-48 mx-auto"
+              />
+            </div>
 
-      <p className="text-xs text-slate-400 mb-2">
-        📱 สแกนด้วยกล้องมือถือ (ที่ต่อ Wi-Fi วงเดียวกัน) เพื่อเปิดดูสเปกและประวัติบำรุงรักษา
-      </p>
+            <p className="text-xs text-slate-400 mb-2">
+              📱 สแกนด้วยกล้องมือถือ (ที่ต่อ Wi-Fi วงเดียวกัน) เพื่อเปิดดูสเปกและประวัติบำรุงรักษา
+            </p>
 
-      <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 mb-4 text-[11px] text-slate-400 font-mono break-all select-all">
-        {typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/assets/${qrAssetTag}` : `/assets/${qrAssetTag}`}
-      </div>
+            <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 mb-4 text-[11px] text-slate-400 font-mono break-all select-all">
+              {typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/assets/${qrAssetTag}` : `/assets/${qrAssetTag}`}
+            </div>
 
-      <Link
-        href={`/assets/${qrAssetTag}`}
-        target="_blank"
-        className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition"
-      >
-        <ExternalLink className="w-4 h-4" /> ทดสอบเปิดบนเครื่องนี้ (Direct Link)
-      </Link>
-    </div>
-  </div>
-)}
+            <Link
+              href={`/assets/${qrAssetTag}`}
+              target="_blank"
+              className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition"
+            >
+              <ExternalLink className="w-4 h-4" /> ทดสอบเปิดบนเครื่องนี้ (Direct Link)
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* PM Form Modal */}
       {showPmModal && (
@@ -838,15 +796,10 @@ export default function RootRedirect() {
               </div>
             </div>
 
-            {/* Current Config Status */}
             <div className="p-3.5 bg-slate-950/70 rounded-2xl border border-slate-800 mb-5 text-xs">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-slate-400">สถานะการเชื่อมต่อ LINE:</span>
-                <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
-                  lineConfigStatus?.is_configured
-                    ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                    : "bg-amber-950 text-amber-400 border border-amber-800"
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${lineConfigStatus?.is_configured ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-amber-950 text-amber-400 border border-amber-800"}`}>
                   {lineConfigStatus?.is_configured ? "พร้อมใช้งาน (Configured)" : "ยังไม่ได้ตั้งค่า Token (จำลอง Mock Log)"}
                 </span>
               </div>
