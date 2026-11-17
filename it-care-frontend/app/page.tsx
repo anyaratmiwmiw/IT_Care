@@ -301,6 +301,7 @@ export default function RootRedirect() {
             ระบบติดตามสถานะและแจ้งเตือนการบำรุงรักษาเชิงป้องกันสำหรับอุปกรณ์คอมพิวเตอร์ (Preventive Maintenance & Alerting)
           </p>
         </div>
+      </header>
 
         <div className="flex flex-wrap items-center gap-3">
           {currentUser ? (
