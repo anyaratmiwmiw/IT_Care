@@ -272,7 +272,7 @@ def read_root():
     return {
         "system": "IT CARE Monitoring System",
         "status": "Online",
-        "version": "2.0"
+        "version": ""
     }
 
 
