@@ -73,7 +73,7 @@ def init_default_support():
 init_default_admin()
 init_default_support()
 
-app = FastAPI(title="IT CARE API System", version="2.0") 
+app = FastAPI(title="IT CARE API System", version="2.0") , #version="2.0"
 
 # ปลดล็อก CORS เพื่อให้ Frontend (Next.js) ดึงข้อมูลได้
 app.add_middleware(
